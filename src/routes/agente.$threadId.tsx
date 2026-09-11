@@ -56,7 +56,7 @@ function ThreadChat() {
     const title =
       thread.title !== "Nova conversa"
         ? thread.title
-        : messageText(firstUserMessage ?? ({} as UIMessage)).slice(0, 40) || thread.title;
+        : messageText(firstUserMessage).slice(0, 40) || thread.title;
     upsertThread({ ...thread, title, messages, updatedAt: Date.now() });
   }, [messages, status, threadId]);
 
