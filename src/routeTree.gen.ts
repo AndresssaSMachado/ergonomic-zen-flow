@@ -10,33 +10,76 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgenteRouteImport } from './routes/agente'
+import { Route as AgenteIndexRouteImport } from './routes/agente.index'
+import { Route as AgenteThreadIdRouteImport } from './routes/agente.$threadId'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgenteRoute = AgenteRouteImport.update({
+  id: '/agente',
+  path: '/agente',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgenteIndexRoute = AgenteIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgenteRoute,
+} as any)
+const AgenteThreadIdRoute = AgenteThreadIdRouteImport.update({
+  id: '/$threadId',
+  path: '/$threadId',
+  getParentRoute: () => AgenteRoute,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agente': typeof AgenteRouteWithChildren
+  '/agente/$threadId': typeof AgenteThreadIdRoute
+  '/api/chat': typeof ApiChatRoute
+  '/agente/': typeof AgenteIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agente/$threadId': typeof AgenteThreadIdRoute
+  '/api/chat': typeof ApiChatRoute
+  '/agente': typeof AgenteIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agente': typeof AgenteRouteWithChildren
+  '/agente/$threadId': typeof AgenteThreadIdRoute
+  '/api/chat': typeof ApiChatRoute
+  '/agente/': typeof AgenteIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/agente' | '/agente/$threadId' | '/api/chat' | '/agente/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/agente/$threadId' | '/api/chat' | '/agente'
+  id:
+    | '__root__'
+    | '/'
+    | '/agente'
+    | '/agente/$threadId'
+    | '/api/chat'
+    | '/agente/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgenteRoute: typeof AgenteRouteWithChildren
+  ApiChatRoute: typeof ApiChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +91,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agente': {
+      id: '/agente'
+      path: '/agente'
+      fullPath: '/agente'
+      preLoaderRoute: typeof AgenteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agente/': {
+      id: '/agente/'
+      path: '/'
+      fullPath: '/agente/'
+      preLoaderRoute: typeof AgenteIndexRouteImport
+      parentRoute: typeof AgenteRoute
+    }
+    '/agente/$threadId': {
+      id: '/agente/$threadId'
+      path: '/$threadId'
+      fullPath: '/agente/$threadId'
+      preLoaderRoute: typeof AgenteThreadIdRouteImport
+      parentRoute: typeof AgenteRoute
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AgenteRouteChildren {
+  AgenteThreadIdRoute: typeof AgenteThreadIdRoute
+  AgenteIndexRoute: typeof AgenteIndexRoute
+}
+
+const AgenteRouteChildren: AgenteRouteChildren = {
+  AgenteThreadIdRoute: AgenteThreadIdRoute,
+  AgenteIndexRoute: AgenteIndexRoute,
+}
+
+const AgenteRouteWithChildren =
+  AgenteRoute._addFileChildren(AgenteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgenteRoute: AgenteRouteWithChildren,
+  ApiChatRoute: ApiChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
