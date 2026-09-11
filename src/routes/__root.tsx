@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import logo from "../assets/logo.png";
 
 function NotFoundComponent() {
   return (
@@ -77,21 +78,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "ErgoPomodoro" },
+      {
+        name: "description",
+        content:
+          "Timer Pomodoro com pausas ativas e agente pessoal de movimento para quem trabalha em home office.",
+      },
+      { property: "og:title", content: "ErgoPomodoro" },
+      {
+        property: "og:description",
+        content:
+          "Timer Pomodoro com pausas ativas e agente pessoal de movimento para quem trabalha em home office.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap",
+      },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -102,7 +115,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
@@ -119,6 +132,33 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
+          <Link to="/" className="flex items-center gap-2.5">
+            <img src={logo} alt="ErgoPomodoro" width={36} height={36} />
+            <span className="font-display text-lg font-semibold tracking-tight">
+              ErgoPomodoro
+            </span>
+          </Link>
+          <nav className="flex items-center gap-1">
+            <Link
+              to="/"
+              className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary"
+              activeProps={{ className: "bg-secondary text-secondary-foreground" }}
+              activeOptions={{ exact: true }}
+            >
+              Timer
+            </Link>
+            <Link
+              to="/agente"
+              className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary"
+              activeProps={{ className: "bg-secondary text-secondary-foreground" }}
+            >
+              Agente Personal
+            </Link>
+          </nav>
+        </div>
+      </header>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
