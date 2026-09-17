@@ -176,23 +176,39 @@ function Index() {
         <span
           className={cn(
             "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide",
-            mode === "focus"
-              ? "bg-primary text-primary-foreground"
-              : "bg-break text-primary-foreground",
+            pendingTransition
+              ? "bg-amber-500 text-white"
+              : mode === "focus"
+                ? "bg-primary text-primary-foreground"
+                : "bg-break text-primary-foreground",
           )}
         >
           <Leaf className="size-4" />
-          {mode === "focus" ? "Tempo de foco" : "Pausa ativa"}
+          {pendingTransition
+            ? mode === "focus"
+              ? "Foco concluído"
+              : "Pausa concluída"
+            : mode === "focus"
+              ? "Tempo de foco"
+              : "Pausa ativa"}
         </span>
         <h1 className="text-2xl font-semibold sm:text-3xl">
-          {mode === "focus"
-            ? "Concentre-se na sua tarefa"
-            : "Levante, respire e alongue-se"}
+          {pendingTransition
+            ? mode === "focus"
+              ? "Você completou o tempo de foco"
+              : "Você completou a pausa ativa"
+            : mode === "focus"
+              ? "Concentre-se na sua tarefa"
+              : "Levante, respire e alongue-se"}
         </h1>
         <p className="max-w-md text-sm text-muted-foreground">
-          {mode === "focus"
-            ? "25 minutos de foco profundo. Quando a pausa chegar, um exercício laboral te espera."
-            : "5 minutos para aliviar a tensão do corpo. Siga o exercício abaixo no seu ritmo."}
+          {pendingTransition
+            ? mode === "focus"
+              ? "O tempo de foco acabou enquanto a aba estava em segundo plano. Inicie a pausa quando estiver pronto."
+              : "A pausa acabou enquanto a aba estava em segundo plano. Inicie o próximo foco quando estiver pronto."
+            : mode === "focus"
+              ? "25 minutos de foco profundo. Quando a pausa chegar, um exercício laboral te espera."
+              : "5 minutos para aliviar a tensão do corpo. Siga o exercício abaixo no seu ritmo."}
         </p>
       </div>
 
