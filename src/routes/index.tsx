@@ -177,7 +177,7 @@ function Index() {
           className={cn(
             "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide",
             pendingTransition
-              ? "bg-amber-500 text-white"
+              ? "bg-accent text-accent-foreground"
               : mode === "focus"
                 ? "bg-primary text-primary-foreground"
                 : "bg-break text-primary-foreground",
