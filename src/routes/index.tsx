@@ -44,8 +44,10 @@ function Index() {
   const [running, setRunning] = useState(false);
   const [cycles, setCycles] = useState(0);
   const [exerciseIndex, setExerciseIndex] = useState(0);
+  const [pendingTransition, setPendingTransition] = useState(false);
   const audioRef = useRef<AudioContext | null>(null);
   const deadlineRef = useRef<number | null>(null);
+  const notifiedRef = useRef(false);
 
   const total = mode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
   const progress = 1 - secondsLeft / total;
@@ -69,9 +71,29 @@ function Index() {
     }
   }, []);
 
+  const advance = useCallback(() => {
+    const nextMode: Mode = mode === "focus" ? "break" : "focus";
+    const nextTotal = nextMode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
+    if (mode === "focus") {
+      setCycles((c) => c + 1);
+      setExerciseIndex((i) => (i + 1) % exercises.length);
+    }
+    setMode(nextMode);
+    setSecondsLeft(nextTotal);
+    setPendingTransition(false);
+    setRunning(true);
+    deadlineRef.current = Date.now() + nextTotal * 1000;
+    notifiedRef.current = false;
+  }, [mode]);
+
   // O tempo é calculado a partir do relógio real, então continua correndo
-  // mesmo com a aba em segundo plano ou minimizada.
+  // mesmo com a aba em segundo plano ou minimizada. Quando uma etapa termina
+  // em segundo plano, o timer pausa e espera você voltar para trocar de etapa.
   useEffect(() => {
+    if (pendingTransition) {
+      deadlineRef.current = null;
+      return;
+    }
     if (!running) {
       deadlineRef.current = null;
       return;
@@ -87,29 +109,26 @@ function Index() {
         return;
       }
       beep();
-      // Compensa o tempo que passou além do fim (aba em segundo plano).
-      let overflow = -remaining;
-      let nextMode: Mode = mode === "focus" ? "break" : "focus";
-      let nextTotal = nextMode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
-      let completedFocus = mode === "focus" ? 1 : 0;
-      let advancedExercise = mode === "focus" ? 1 : 0;
-
-      while (overflow >= nextTotal) {
-        overflow -= nextTotal;
-        if (nextMode === "focus") {
-          completedFocus += 1;
-          advancedExercise += 1;
+      if (document.visibilityState !== "visible") {
+        // Aba em segundo plano: não troca automaticamente de etapa.
+        if (!notifiedRef.current) {
+          notifiedRef.current = true;
+          setRunning(false);
+          setSecondsLeft(0);
+          setPendingTransition(true);
         }
-        nextMode = nextMode === "focus" ? "break" : "focus";
-        nextTotal = nextMode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
+        return;
       }
-
-      deadlineRef.current = Date.now() + (nextTotal - overflow) * 1000;
+      // Aba visível: troca automaticamente para a próxima etapa.
+      const nextMode: Mode = mode === "focus" ? "break" : "focus";
+      const nextTotal = nextMode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
+      if (mode === "focus") {
+        setCycles((c) => c + 1);
+        setExerciseIndex((i) => (i + 1) % exercises.length);
+      }
+      deadlineRef.current = Date.now() + nextTotal * 1000;
       setMode(nextMode);
-      setSecondsLeft(nextTotal - overflow);
-      if (completedFocus) setCycles((c) => c + completedFocus);
-      if (advancedExercise)
-        setExerciseIndex((i) => (i + advancedExercise) % exercises.length);
+      setSecondsLeft(nextTotal);
     };
 
     const id = setInterval(tick, 250);
@@ -124,10 +143,12 @@ function Index() {
       window.removeEventListener("focus", onVisible);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, mode, beep]);
+  }, [running, mode, beep, pendingTransition, advance]);
 
   const reset = () => {
     setRunning(false);
+    setPendingTransition(false);
+    notifiedRef.current = false;
     deadlineRef.current = null;
     setSecondsLeft(mode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS);
   };
@@ -138,6 +159,8 @@ function Index() {
     if (mode === "focus") setCycles((c) => c + 1);
     setMode(nextMode);
     setSecondsLeft(nextTotal);
+    setPendingTransition(false);
+    notifiedRef.current = false;
     deadlineRef.current = running ? Date.now() + nextTotal * 1000 : null;
   };
 
@@ -153,23 +176,39 @@ function Index() {
         <span
           className={cn(
             "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide",
-            mode === "focus"
-              ? "bg-primary text-primary-foreground"
-              : "bg-break text-primary-foreground",
+            pendingTransition
+              ? "bg-accent text-accent-foreground"
+              : mode === "focus"
+                ? "bg-primary text-primary-foreground"
+                : "bg-break text-primary-foreground",
           )}
         >
           <Leaf className="size-4" />
-          {mode === "focus" ? "Tempo de foco" : "Pausa ativa"}
+          {pendingTransition
+            ? mode === "focus"
+              ? "Foco concluído"
+              : "Pausa concluída"
+            : mode === "focus"
+              ? "Tempo de foco"
+              : "Pausa ativa"}
         </span>
         <h1 className="text-2xl font-semibold sm:text-3xl">
-          {mode === "focus"
-            ? "Concentre-se na sua tarefa"
-            : "Levante, respire e alongue-se"}
+          {pendingTransition
+            ? mode === "focus"
+              ? "Você completou o tempo de foco"
+              : "Você completou a pausa ativa"
+            : mode === "focus"
+              ? "Concentre-se na sua tarefa"
+              : "Levante, respire e alongue-se"}
         </h1>
         <p className="max-w-md text-sm text-muted-foreground">
-          {mode === "focus"
-            ? "25 minutos de foco profundo. Quando a pausa chegar, um exercício laboral te espera."
-            : "5 minutos para aliviar a tensão do corpo. Siga o exercício abaixo no seu ritmo."}
+          {pendingTransition
+            ? mode === "focus"
+              ? "O tempo de foco acabou enquanto a aba estava em segundo plano. Inicie a pausa quando estiver pronto."
+              : "A pausa acabou enquanto a aba estava em segundo plano. Inicie o próximo foco quando estiver pronto."
+            : mode === "focus"
+              ? "25 minutos de foco profundo. Quando a pausa chegar, um exercício laboral te espera."
+              : "5 minutos para aliviar a tensão do corpo. Siga o exercício abaixo no seu ritmo."}
         </p>
       </div>
 
@@ -212,11 +251,29 @@ function Index() {
         <div className="fade-up flex items-center gap-3">
           <Button
             size="lg"
-            onClick={() => setRunning((r) => !r)}
+            onClick={() => {
+              if (pendingTransition) {
+                advance();
+              } else {
+                setRunning((r) => !r);
+              }
+            }}
             className="h-12 gap-2 rounded-full px-8 text-base"
           >
-            {running ? <Pause className="size-5" /> : <Play className="size-5" />}
-            {running ? "Pausar" : "Iniciar"}
+            {pendingTransition ? (
+              <>
+                <Play className="size-5" />
+                {mode === "focus" ? "Iniciar pausa" : "Iniciar foco"}
+              </>
+            ) : running ? (
+              <>
+                <Pause className="size-5" /> Pausar
+              </>
+            ) : (
+              <>
+                <Play className="size-5" /> Iniciar
+              </>
+            )}
           </Button>
           <Button variant="outline" size="icon" onClick={reset} aria-label="Reiniciar timer" className="size-12 rounded-full">
             <RotateCcw className="size-5" />
