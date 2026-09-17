@@ -45,6 +45,7 @@ function Index() {
   const [cycles, setCycles] = useState(0);
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const audioRef = useRef<AudioContext | null>(null);
+  const deadlineRef = useRef<number | null>(null);
 
   const total = mode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
   const progress = 1 - secondsLeft / total;
@@ -68,39 +69,76 @@ function Index() {
     }
   }, []);
 
+  // O tempo é calculado a partir do relógio real, então continua correndo
+  // mesmo com a aba em segundo plano ou minimizada.
   useEffect(() => {
-    if (!running) return;
-    const id = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev > 1) return prev - 1;
-        beep();
-        if (mode === "focus") {
-          setMode("break");
-          setCycles((c) => c + 1);
-          setExerciseIndex((i) => (i + 1) % exercises.length);
-          return BREAK_SECONDS;
+    if (!running) {
+      deadlineRef.current = null;
+      return;
+    }
+    deadlineRef.current ??= Date.now() + secondsLeft * 1000;
+
+    const tick = () => {
+      const deadline = deadlineRef.current;
+      if (deadline == null) return;
+      const remaining = Math.ceil((deadline - Date.now()) / 1000);
+      if (remaining > 0) {
+        setSecondsLeft(remaining);
+        return;
+      }
+      beep();
+      // Compensa o tempo que passou além do fim (aba em segundo plano).
+      let overflow = -remaining;
+      let nextMode: Mode = mode === "focus" ? "break" : "focus";
+      let nextTotal = nextMode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
+      let completedFocus = mode === "focus" ? 1 : 0;
+      let advancedExercise = mode === "focus" ? 1 : 0;
+
+      while (overflow >= nextTotal) {
+        overflow -= nextTotal;
+        if (nextMode === "focus") {
+          completedFocus += 1;
+          advancedExercise += 1;
         }
-        setMode("focus");
-        return FOCUS_SECONDS;
-      });
-    }, 1000);
-    return () => clearInterval(id);
+        nextMode = nextMode === "focus" ? "break" : "focus";
+        nextTotal = nextMode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
+      }
+
+      deadlineRef.current = Date.now() + (nextTotal - overflow) * 1000;
+      setMode(nextMode);
+      setSecondsLeft(nextTotal - overflow);
+      if (completedFocus) setCycles((c) => c + completedFocus);
+      if (advancedExercise)
+        setExerciseIndex((i) => (i + advancedExercise) % exercises.length);
+    };
+
+    const id = setInterval(tick, 250);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, mode, beep]);
 
   const reset = () => {
     setRunning(false);
+    deadlineRef.current = null;
     setSecondsLeft(mode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS);
   };
 
   const skip = () => {
-    if (mode === "focus") {
-      setMode("break");
-      setCycles((c) => c + 1);
-      setSecondsLeft(BREAK_SECONDS);
-    } else {
-      setMode("focus");
-      setSecondsLeft(FOCUS_SECONDS);
-    }
+    const nextMode: Mode = mode === "focus" ? "break" : "focus";
+    const nextTotal = nextMode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
+    if (mode === "focus") setCycles((c) => c + 1);
+    setMode(nextMode);
+    setSecondsLeft(nextTotal);
+    deadlineRef.current = running ? Date.now() + nextTotal * 1000 : null;
   };
 
   const ring = useMemo(() => {
