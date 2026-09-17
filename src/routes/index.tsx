@@ -251,11 +251,29 @@ function Index() {
         <div className="fade-up flex items-center gap-3">
           <Button
             size="lg"
-            onClick={() => setRunning((r) => !r)}
+            onClick={() => {
+              if (pendingTransition) {
+                advance();
+              } else {
+                setRunning((r) => !r);
+              }
+            }}
             className="h-12 gap-2 rounded-full px-8 text-base"
           >
-            {running ? <Pause className="size-5" /> : <Play className="size-5" />}
-            {running ? "Pausar" : "Iniciar"}
+            {pendingTransition ? (
+              <>
+                <Play className="size-5" />
+                {mode === "focus" ? "Iniciar pausa" : "Iniciar foco"}
+              </>
+            ) : running ? (
+              <>
+                <Pause className="size-5" /> Pausar
+              </>
+            ) : (
+              <>
+                <Play className="size-5" /> Iniciar
+              </>
+            )}
           </Button>
           <Button variant="outline" size="icon" onClick={reset} aria-label="Reiniciar timer" className="size-12 rounded-full">
             <RotateCcw className="size-5" />
